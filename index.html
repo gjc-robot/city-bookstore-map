@@ -1,19 +1,333 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <title>城市小众书店地图</title>
-  <!-- 引入Leaflet资源 -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <style>
-    #map { height: 800px; width: 100%; }/* 地图容器大小 */
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文轩连锁书店 - 线上线下一体化阅读空间</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Microsoft YaHei', sans-serif; }
+        header { background: #2c3e50; color: white; padding: 20px 0; text-align: center; }
+        nav { background: #34495e; padding: 15px; position: sticky; top: 0; z-index: 999; }
+        .nav-container { width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; }
+        .nav-category { display: flex; gap: 25px; }
+        .nav-category a { color: white; text-decoration: none; font-size: 16px; }
+        .search-box { display: flex; align-items: center; }
+        .search-box input { padding: 8px 15px; border: none; border-radius: 20px 0 0 20px; width: 250px; }
+        .search-box button { padding: 8px 15px; border: none; border-radius: 0 20px 20px 0; background: #e74c3c; color: white; cursor: pointer; }
+        .container { width: 1200px; margin: 30px auto; display: flex; flex-direction: column; gap: 40px; }
+        .section-title { font-size: 24px; color: #2c3e50; border-left: 4px solid #e74c3c; padding-left: 15px; margin-bottom: 20px; }
+        /* 图书分类模块 */
+        .book-category { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+        .category-card { border: 1px solid #eee; border-radius: 8px; padding: 20px; transition: box-shadow 0.3s; }
+        .category-card:hover { box-shadow: 0 2px 15px rgba(0,0,0,0.08); }
+        .category-card h3 { color: #34495e; margin-bottom: 15px; font-size: 18px; }
+        .category-list { list-style: none; display: flex; flex-wrap: wrap; gap: 10px; }
+        .category-list li a { color: #7f8c8d; text-decoration: none; padding: 5px 10px; background: #f8f9fa; border-radius: 15px; font-size: 14px; }
+        .category-list li a:hover { background: #e74c3c; color: white; }
+        /* 门店信息模块 */
+        .store-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 30px; }
+        .store-card { border: 1px solid #eee; border-radius: 8px; overflow: hidden; }
+        .store-header { background: #3498db; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .store-body { padding: 20px; }
+        .store-map { width: 100%; height: 250px; margin: 15px 0; border-radius: 4px; }
+        .store-info { line-height: 1.8; color: #34495e; }
+        .store-tags { margin-top: 10px; display: flex; gap: 8px; }
+        .store-tag { padding: 3px 10px; background: #f1c40f; color: white; border-radius: 12px; font-size: 12px; }
+        /* 热门推荐模块 */
+        .hot-books { display: grid; grid-template-columns: repeat(4, 1fr); gap: 25px; }
+        .book-card { text-align: center; }
+        .book-cover { width: 180px; height: 250px; object-fit: cover; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 10px; }
+        .book-title { font-size: 16px; color: #2c3e50; margin-bottom: 5px; }
+        .book-author { font-size: 14px; color: #7f8c8d; margin-bottom: 8px; }
+        .book-price { color: #e74c3c; font-weight: bold; }
+        footer { background: #2c3e50; color: white; text-align: center; padding: 30px 0; margin-top: 50px; }
+        /* 响应式适配 */
+        @media (max-width: 1200px) {
+            .nav-container, .container { width: 90%; }
+            .book-category, .store-list, .hot-books { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 768px) {
+            .book-category, .store-list, .hot-books { grid-template-columns: 1fr; }
+            .nav-category { display: none; }
+        }
+    </style>
 </head>
 <body>
-  <h1>城市小众书店地图</h1>
-  <div id="map"></div>
-  <script src="bookstores.js"></script>
-  <script src="map.js"></script>
+    <!-- 头部导航 -->
+    <header>
+        <h1>文轩连锁书店</h1>
+        <p>线上选书，线下体验，让阅读触手可及</p>
+    </header>
+    <nav>
+        <div class="nav-container">
+            <div class="nav-category">
+                <a href="#book-category">图书分类</a>
+                <a href="#store-list">线下门店</a>
+                <a href="#hot-books">热门推荐</a>
+                <a href="#">会员服务</a>
+                <a href="#">文化活动</a>
+            </div>
+            <div class="search-box">
+                <input type="text" placeholder="搜索书名、作者、ISBN...">
+                <button>搜索</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- 图书分类模块 -->
+        <section id="book-category">
+            <h2 class="section-title">图书分类</h2>
+            <div class="book-category">
+                <!-- 人文社科类 -->
+                <div class="category-card">
+                    <h3>📚 人文社科</h3>
+                    <ul class="category-list">
+                        <li><a href="#">中国文学</a></li>
+                        <li><a href="#">外国文学</a></li>
+                        <li><a href="#">历史传记</a></li>
+                        <li><a href="#">哲学心理</a></li>
+                        <li><a href="#">政治法律</a></li>
+                        <li><a href="#">经济管理</a></li>
+                    </ul>
+                </div>
+                <!-- 自然科学类 -->
+                <div class="category-card">
+                    <h3>🔬 自然科学</h3>
+                    <ul class="category-list">
+                        <li><a href="#">数学物理</a></li>
+                        <li><a href="#">化学天文</a></li>
+                        <li><a href="#">生物医学</a></li>
+                        <li><a href="#">计算机技术</a></li>
+                        <li><a href="#">工业工程</a></li>
+                        <li><a href="#">环境科学</a></li>
+                    </ul>
+                </div>
+                <!-- 生活实用类 -->
+                <div class="category-card">
+                    <h3>🌿 生活实用</h3>
+                    <ul class="category-list">
+                        <li><a href="#">美食烹饪</a></li>
+                        <li><a href="#">家居整理</a></li>
+                        <li><a href="#">理财投资</a></li>
+                        <li><a href="#">健康养生</a></li>
+                        <li><a href="#">旅行游记</a></li>
+                        <li><a href="#">职场技能</a></li>
+                    </ul>
+                </div>
+                <!-- 艺术设计类 -->
+                <div class="category-card">
+                    <h3>🎨 艺术设计</h3>
+                    <ul class="category-list">
+                        <li><a href="#">绘画雕塑</a></li>
+                        <li><a href="#">音乐影视</a></li>
+                        <li><a href="#">摄影摄像</a></li>
+                        <li><a href="#">建筑设计</a></li>
+                        <li><a href="#">平面设计</a></li>
+                        <li><a href="#">时尚穿搭</a></li>
+                    </ul>
+                </div>
+                <!-- 少儿读物类 -->
+                <div class="category-card">
+                    <h3>👶 少儿读物</h3>
+                    <ul class="category-list">
+                        <li><a href="#">绘本图画书</a></li>
+                        <li><a href="#">低幼启蒙</a></li>
+                        <li><a href="#">儿童文学</a></li>
+                        <li><a href="#">科普百科</a></li>
+                        <li><a href="#">教辅资料</a></li>
+                        <li><a href="#">成长励志</a></li>
+                    </ul>
+                </div>
+                <!-- 特色专题类 -->
+                <div class="category-card">
+                    <h3>🌟 特色专题</h3>
+                    <ul class="category-list">
+                        <li><a href="#">在地文化</a></li>
+                        <li><a href="#">熊猫主题</a></li>
+                        <li><a href="#">经典重读</a></li>
+                        <li><a href="#">新书首发</a></li>
+                        <li><a href="#">考研考公</a></li>
+                        <li><a href="#">外语学习</a></li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- 线下门店模块 -->
+        <section id="store-list">
+            <h2 class="section-title">线下门店</h2>
+            <div class="store-list">
+                <!-- 成都西南书城 -->
+                <div class="store-card">
+                    <div class="store-header">
+                        <h3>成都西南书城（旗舰总店）</h3>
+                        <span class="store-tag">全景书店</span>
+                    </div>
+                    <div class="store-body">
+                        <div id="map1" class="store-map"></div>
+                        <div class="store-info">
+                            <p><strong>地址：</strong>四川省成都市锦江区东大街下东大街段99号</p>
+                            <p><strong>坐标：</strong>30.6594° N, 104.0657° E</p>
+                            <p><strong>特色：</strong>在地文化特色区+全景线上逛店+小时达配送，30万种图书现货</p>
+                            <p><strong>营业时间：</strong>9:30-21:00</p>
+                            <p><strong>服务：</strong>图书零售、文创销售、文化讲座、咖啡茶饮、线上下单自提</p>
+                        </div>
+                        <div class="store-tags">
+                            <span class="store-tag">城市地标</span>
+                            <span class="store-tag">文化讲座</span>
+                            <span class="store-tag">文创集合</span>
+                        </div>
+                    </div>
+                </div>
+                <!-- 成都熊猫书店 -->
+                <div class="store-card">
+                    <div class="store-header">
+                        <h3>成都熊猫书店（主题店）</h3>
+                        <span class="store-tag">网红打卡</span>
+                    </div>
+                    <div class="store-body">
+                        <div id="map2" class="store-map"></div>
+                        <div class="store-info">
+                            <p><strong>地址：</strong>四川省成都市成华区熊猫大道1375号</p>
+                            <p><strong>坐标：</strong>30.7908° N, 104.1558° E</p>
+                            <p><strong>特色：</strong>熊猫主题沉浸式空间，自然科普馆+ACG动漫区</p>
+                            <p><strong>营业时间：</strong>10:00-20:30</p>
+                            <p><strong>服务：</strong>主题图书、熊猫文创、科普体验、亲子活动、拍照打卡</p>
+                        </div>
+                        <div class="store-tags">
+                            <span class="store-tag">亲子友好</span>
+                            <p><strong>科普体验</strong></p>
+                            <span class="store-tag">文创周边</span>
+                        </div>
+                    </div>
+                </div>
+                <!-- 绵阳书城 -->
+                <div class="store-card">
+                    <div class="store-header">
+                        <h3>绵阳书城（文化体验店）</h3>
+                        <span class="store-tag">书院风格</span>
+                    </div>
+                    <div class="store-body">
+                        <div id="map3" class="store-map"></div>
+                        <div class="store-info">
+                            <p><strong>地址：</strong>四川省绵阳市涪城区临园路东段72号</p>
+                            <p><strong>坐标：</strong>31.4659° N, 104.7332° E</p>
+                            <p><strong>特色：</strong>绵州书院文化区，引入三联书店+地图主题书店+国图文创</p>
+                            <p><strong>营业时间：</strong>9:00-20:00</p>
+                            <p><strong>服务：</strong>精品图书、古籍展示、文化沙龙、学生教辅、团购服务</p>
+                        </div>
+                        <div class="store-tags">
+                            <span class="store-tag">古籍展示</span>
+                            <span class="store-tag">学生友好</span>
+                            <span class="store-tag">团购服务</span>
+                        </div>
+                    </div>
+                </div>
+                <!-- 福州大学店 -->
+                <div class="store-card">
+                    <div class="store-header">
+                        <h3>福大校园书店（高校店）</h3>
+                        <span class="store-tag">校园专属</span>
+                    </div>
+                    <div class="store-body">
+                        <div id="map4" class="store-map"></div>
+                        <div class="store-info">
+                            <p><strong>地址：</strong>福建省福州市闽侯县福州大学旗山校区商业街108号</p>
+                            <p><strong>坐标：</strong>26.0572° N, 119.2429° E</p>
+                            <p><strong>特色：</strong>高校教材+学术著作+考研资料，贴近学生需求</p>
+                            <p><strong>营业时间：</strong>8:30-22:00</p>
+                            <p><strong>服务：</strong>教材零售、学术书籍、考研辅导、文具用品、打印复印</p>
+                        </div>
+                        <div class="store-tags">
+                            <span class="store-tag">教材专卖</span>
+                            <span class="store-tag">考研资料</span>
+                            <span class="store-tag">24小时自习</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 热门推荐模块 -->
+        <section id="hot-books">
+            <h2 class="section-title">热门推荐</h2>
+            <div class="hot-books">
+                <div class="book-card">
+                    <img src="https://via.placeholder.com/180x250?text=中国文学史" class="book-cover" alt="中国文学史">
+                    <h4 class="book-title">中国文学史（全三卷）</h4>
+                    <p class="book-author">袁行霈 著</p>
+                    <p class="book-price">¥198.00</p>
+                </div>
+                <div class="book-card">
+                    <img src="https://via.placeholder.com/180x250?text=Python编程" class="book-cover" alt="Python编程">
+                    <h4 class="book-title">Python编程：从入门到实践</h4>
+                    <p class="book-author">埃里克·马瑟斯 著</p>
+                    <p class="book-price">¥89.00</p>
+                </div>
+                <div class="book-card">
+                    <img src="https://via.placeholder.com/180x250?text=熊猫科普" class="book-cover" alt="熊猫科普">
+                    <h4 class="book-title">大熊猫的秘密生活</h4>
+                    <p class="book-author">张和民 编著</p>
+                    <p class="book-price">¥68.00</p>
+                </div>
+                <div class="book-card">
+                    <img src="https://via.placeholder.com/180x250?text=亲子绘本" class="book-cover" alt="亲子绘本">
+                    <h4 class="book-title">猜猜我有多爱你</h4>
+                    <p class="book-author">山姆·麦克布雷尼 著</p>
+                    <p class="book-price">¥45.00</p>
+                </div>
+                <div class="book-card">
+                    <img src="https://via.placeholder.com/180x250?text=经济学原理" class="book-cover" alt="经济学原理">
+                    <h4 class="book-title">经济学原理（微观分册）</h4>
+                    <p class="book-author">曼昆 著</p>
+                    <p class="book-price">¥72.00</p>
+                </div>
+                <div class="book-card">
+                    <img src="https://via.placeholder.com/180x250?text=摄影技巧" class="book-cover" alt="摄影技巧">
+                    <h4 class="book-title">摄影构图圣经</h4>
+                    <p class="book-author">中井精也 著</p>
+                    <p class="book-price">¥88.00</p>
+                </div>
+                <div class="book-card">
+                    <img src="https://via.placeholder.com/180x250?text=考研英语" class="book-cover" alt="考研英语">
+                    <h4 class="book-title">考研英语历年真题详解</h4>
+                    <p class="book-author">张剑 主编</p>
+                    <p class="book-price">¥99.00</p>
+                </div>
+                <div class="book-card">
+                    <img src="https://via.placeholder.com/180x250?text=川菜烹饪" class="book-cover" alt="川菜烹饪">
+                    <h4 class="book-title">地道川菜大全</h4>
+                    <p class="book-author">川菜大师工作室 编</p>
+                    <p class="book-price">¥58.00</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <footer>
+        <p>文轩连锁书店 © 2026 版权所有</p>
+        <p>线上客服：400-888-9999 | 隐私政策 | 会员协议 | 门店加盟</p>
+        <p>支持线上下单、门店自提、同城小时达、全国配送服务</p>
+    </footer>
+
+    <!-- 高德地图API -->
+    <script type="text/javascript" src="https://webapi.amap.com/maps?v=2.0&key=你的高德地图API密钥"></script>
+    <script>
+        // 初始化4家门店地图
+        function initMap(id, lng, lat, title) {
+            var map = new AMap.Map(id, { zoom: 15, center: [lng, lat] });
+            var marker = new AMap.Marker({ position: [lng, lat], title: title });
+            marker.addTo(map);
+        }
+        // 成都西南书城
+        initMap('map1', 104.0657, 30.6594, '成都西南书城');
+        // 成都熊猫书店
+        initMap('map2', 104.1558, 30.7908, '成都熊猫书店');
+        // 绵阳书城
+        initMap('map3', 104.7332, 31.4659, '绵阳书城');
+        // 福州大学店
+        initMap('map4', 119.2429, 26.0572, '福大校园书店');
+    </script>
 </body>
 </html>
